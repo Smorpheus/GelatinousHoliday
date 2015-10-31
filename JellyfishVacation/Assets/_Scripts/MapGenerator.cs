@@ -1,8 +1,23 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+[System.Serializable]
+public struct IntVector2
+{
+	public IntVector2(int x, int y) {
+		this.x = x;
+		this.y = y;
+	}
+
+	public int x;
+	public int y;
+}
+
 public class MapGenerator : MonoBehaviour 
 {
+	private static MapGenerator instance;
+	public static MapGenerator Instance { get { return instance; } }
+
 	private const float TILE_DIMENSIONS = 1.0f;
 
 	public enum TileType
@@ -20,6 +35,17 @@ public class MapGenerator : MonoBehaviour
 		public GameObject[] prefabs;
 	}
 
+	public class InstantiatedTile
+	{
+		public InstantiatedTile(TileType type, GameObject tileGO) {
+			this.type = type;
+			this.tileGO = tileGO;
+		}
+
+		public TileType type;
+		public GameObject tileGO;
+	}
+
 	[SerializeField] Tile[] styles;
 
 	[SerializeField] private Texture2D sampleMap;
@@ -28,10 +54,16 @@ public class MapGenerator : MonoBehaviour
 	[SerializeField] Transform maze;
 
 	private Color[,] currentMapPixels;
-	private TileType[,] tiles;
+	private InstantiatedTile[,] tiles;
+	public InstantiatedTile[,] Tiles { get { return tiles; } }
+
+	[SerializeField] private IntVector2 spawnPoint;
+	public IntVector2 SpawnPoint { get { return spawnPoint; } }
 
 	private void Awake()
 	{
+		instance = this;
+
 		if(debug == true) {
 			GenerateSampleMap();
 		}
@@ -39,15 +71,15 @@ public class MapGenerator : MonoBehaviour
 
 	private void GenerateSampleMap()
 	{
-		GenerateMapArray(sampleMap);
-		DrawMap();
+		DrawNewMap(sampleMap);
 	}
 
-	private void GenerateMapArray(Texture2D map)
+	public void DrawNewMap(Texture2D map)
 	{
 		Color[] fullPixels = map.GetPixels();
 
 		currentMapPixels = ConvertColorArrayToMulti(fullPixels, map.height, map.width);
+		DrawMap();
 	}
 
 	private void DrawMap()
@@ -56,15 +88,25 @@ public class MapGenerator : MonoBehaviour
 
 		GameObject mazeHolder = new GameObject("Maze Holder");
 
+		tiles = new InstantiatedTile[currentMapPixels.GetLength(0), currentMapPixels.GetLength(1)];
+
 		for (int i = 0; i < currentMapPixels.GetLength(0); i++) {
 			for (int j = 0; j < currentMapPixels.GetLength(1); j++) {
 				Vector3 tilePosition = new Vector3(startPosition.x + (i * TILE_DIMENSIONS), 
 				                                   0.0f, 
 				                                   startPosition.z + (j * TILE_DIMENSIONS));
-
 				Color currentColor = currentMapPixels[i, j];
 				Tile tile = GetTileByColor(currentColor);
-				GameObject.Instantiate(tile.prefabs[Random.Range(0, tile.prefabs.Length)], tilePosition, Quaternion.identity);
+
+				GameObject newTileGO = (GameObject) GameObject.Instantiate(tile.prefabs[Random.Range(0, tile.prefabs.Length)], 
+				                                            tilePosition, 
+				                                            Quaternion.identity);
+				newTileGO.transform.parent = mazeHolder.transform;
+				tiles[i, j] = new InstantiatedTile(tile.type, newTileGO);
+
+				if(tile.type == TileType.START_POS) {
+					spawnPoint = new IntVector2(i, j);
+				}
 			}
 		}
 	}

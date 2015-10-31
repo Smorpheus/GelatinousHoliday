@@ -9,15 +9,20 @@ public class ChaseCam : MonoBehaviour
 
 	[SerializeField] private GameObject chaseTarget;
 
-	private Vector3 chaseDistance;
-	private Vector3 rotOffset;
+	[SerializeField] private Vector3 chaseDistance;
+	[SerializeField] private Vector3 rotOffset;
 
 	private bool chasing = false;
 
+	private void StartChase()
+	{
+		StartChase(chaseTarget);
+	}
 
-	public void StartChase ()
+	public void StartChase (GameObject target)
 	{
 		chasing = true;
+		chaseTarget = target;
 		chaseDistance = this.transform.position - chaseTarget.transform.position;
 		rotOffset = this.transform.eulerAngles - chaseTarget.transform.eulerAngles;
 	}
@@ -36,14 +41,15 @@ public class ChaseCam : MonoBehaviour
 			return;
 		}
 
-		if(chaseTarget == null) 
-		{
+		if(chaseTarget == null) {
 			chasing = false;
 			return;
 		}
 
 		this.transform.position = Vector3.Lerp(this.transform.position, (chaseTarget.transform.position + chaseDistance), POS_LERP_SPEED);
-		this.transform.eulerAngles = Vector3.Lerp(this.transform.eulerAngles, (chaseTarget.transform.eulerAngles + rotOffset), ROT_LERP_SPEED);
+		if(CHASE_ROTATION == true) {
+			this.transform.eulerAngles = Vector3.Lerp(this.transform.eulerAngles, (chaseTarget.transform.eulerAngles + rotOffset), ROT_LERP_SPEED);
+		}
 	}
 
 }
