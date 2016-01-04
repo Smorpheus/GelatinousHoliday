@@ -136,7 +136,7 @@ public class MapGenerator : MonoBehaviour
 		for (int i = 0; i < imageHeight; i++) {
 			for (int j = 0; j < imageWidth; j++) {
 				int currentPix = (i * imageWidth) + j;
-				multiPixelArray[i, j] = sourcePixels[currentPix];
+				multiPixelArray[j, i] = sourcePixels[currentPix];
 			}
 		}
 

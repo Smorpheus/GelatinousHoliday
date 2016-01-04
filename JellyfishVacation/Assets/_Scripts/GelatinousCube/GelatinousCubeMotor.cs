@@ -12,11 +12,11 @@ public class GelatinousCubeMotor : MonoBehaviour
 	}
 
 	[System.Serializable]
-	private class ValidDirection
+	public class ValidDirection
 	{
 		public Direction dir;
 		public string inputVal;
-		public Vector2 vectorDir;
+		public IntVector2 vectorDir;
 	}
 
 	[SerializeField] private ValidDirection[] validDirections;
@@ -26,9 +26,9 @@ public class GelatinousCubeMotor : MonoBehaviour
 	private const string VERTICAL_AXIS = "Vertical";
 
 	//This is a multiplier based on one TILE taking one second to traverse.
-	private const float BASE_SPEED = 0.5f;
+	private const float BASE_SPEED = 2.0f;
 
-	private Vector2 moveDir = Vector2.zero;
+	[SerializeField] private IntVector2 moveDir = new IntVector2(0, 0);
 	[SerializeField] private IntVector2 currentTile;
 	[SerializeField] private IntVector2 targetTile;
 
@@ -80,11 +80,17 @@ public class GelatinousCubeMotor : MonoBehaviour
 		foreach(ValidDirection inputDir in validDirections) {
 			if(Input.GetButton(inputDir.inputVal)) {
 				//If we're already moving this way, just ignore.
-				if(moveDir == inputDir.vectorDir) {
+				if((moveDir.x == inputDir.vectorDir.x) && (moveDir.y == inputDir.vectorDir.y)) {
 					continue;
 				}
 
-				if(CheckIfValidDirection(inputDir.vectorDir) == true) {
+                //Check if we're flipping directions.  If so, it's valid.
+                if(CheckIfReversingDirection(inputDir.vectorDir) == true) {
+                    FlipDirection();
+                    return true;
+                } 
+
+				if(moveProgress == 1.0f && CheckIfValidDirection(inputDir.vectorDir) == true) {
 					MoveInDirection(inputDir.vectorDir);
 					return true;
 				}
@@ -94,16 +100,29 @@ public class GelatinousCubeMotor : MonoBehaviour
 		return false;
 	}
 	
+    private void FlipDirection()
+    {
+        moveDir = new IntVector2(-moveDir.x, -moveDir.y);
 
+        if(IsMoving == false) {
+            MoveInDirection(moveDir);
+            return;
+        }
+        
+        targetTile = new IntVector2(currentTile.x, currentTile.y);
+        currentTile = new IntVector2(currentTile.x - moveDir.x, currentTile.y - moveDir.y);
+        moveProgress = 1.0f - moveProgress;
+    }
 
-	private void MoveInDirection(Vector2 newDirection)
+	private void MoveInDirection(IntVector2 newDirection)
 	{
 		moveDir = newDirection;
 		if(moveProgress >= 1.0f)
 		{
 			moveProgress = 0.0f;
-		}
-		targetTile = new IntVector2(currentTile.x + Mathf.RoundToInt(newDirection.x), currentTile.y + Mathf.RoundToInt(newDirection.y));
+		} 
+        
+		targetTile = new IntVector2(currentTile.x + newDirection.x, currentTile.y + newDirection.y);
 	}
 
 	private void MoveComplete()
@@ -119,8 +138,22 @@ public class GelatinousCubeMotor : MonoBehaviour
 		}
 	}
 
-	private bool CheckIfValidDirection(Vector2 newDirection)
+    private bool CheckIfReversingDirection(IntVector2 newDirection)
+    {
+        //First Check if this is just a reversal of the current direction. If it is, return true.
+        if(Mathf.Abs(moveDir.x) - Mathf.Abs((int)newDirection.x) == 0) {
+            return true;
+        }
+
+        if(Mathf.Abs(moveDir.y) - Mathf.Abs((int)newDirection.y) == 0) {
+            return true;
+        }
+        return false;
+    }
+
+	private bool CheckIfValidDirection(IntVector2 newDirection)
 	{
+        //Check to see if next tile is blocked.
 		IntVector2 checkTile = new IntVector2(currentTile.x + (int) newDirection.x, currentTile.y + (int) newDirection.y);
 		switch(mapGen.Tiles[checkTile.x, checkTile.y].type) {
 		case MapGenerator.TileType.WALL:
